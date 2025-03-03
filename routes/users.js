@@ -42,7 +42,7 @@ router.post('/signup', (req, res) => {
     });
   }).catch(err => {
     console.error(err);
-    res.json({ result: false, error:"Internal server error" });
+    res.json({ result: false, error: "Internal server error" });
   });
 });
 
