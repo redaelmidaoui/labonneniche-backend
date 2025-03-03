@@ -6,6 +6,7 @@ const annonceSchema = mongoose.Schema({
         default: Date.now
       },
     pictures: [String],
+    many: Boolean,
     age: String,
     sort: String,
     gender: String,
