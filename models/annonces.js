@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const userSchema = mongoose.Schema({
+const annonceSchema = mongoose.Schema({
     publicationDate: {
         type: Date,
         default: Date.now
@@ -10,6 +10,10 @@ const userSchema = mongoose.Schema({
     sort: String,
     gender: String,
     description: String,
+    author: {
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: "users"      
+      },
 });
 
 const Annonce = mongoose.model("annonces", annonceSchema);
