@@ -2,56 +2,67 @@ var express = require('express');
 var router = express.Router();
 const bcrypt = require('bcrypt');
 const uid2 = require('uid2');
-
 const User = require('../models/users');
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phoneRegex = /^((\+33|0)[67])(\d{8})$/;
 
 // Route GET pour récupérer tous les utilisateurs de la base de donnée
 
 router.get('/', (req, res) => {
   User.find()
-  .then(users => {
-    res.json({ result: true, users });
-  })
-  .catch(err => {
-    res.json({ result: false, error: "ƒailed to fetch users" });
-  });
+      .then(users => res.json({ result: true, users }))
+      .catch(() => res.json({ result: false, error: "Failed to fetch users" }));
 });
 
 // Route SignUp - Inscription Nouveaux utilisateurs
 
 router.post('/signup', (req, res) => {
-  const { lastname, firstname, mail, password } = req.body;
+  const { firstname, lastname, gender, adresse, phoneNumber, mail, password, registrationQuestionnaire } = req.body;
 
-  if (!lastname || !firstname || !mail || !password) {
-    return res.json({ result: false, error: "Missing or empty fields" });
+  if (!firstname || !lastname || !gender || !adresse || !phoneNumber || !mail || !password) {
+      return res.json({ result: false, error: "Tous les champs sont requis" });
+  }
+
+  if (!emailRegex.test(mail)) {
+      return res.json({ result: false, error: "Format d'email invalide" });
+  }
+
+  if (!phoneRegex.test(phoneNumber)) {
+      return res.json({ result: false, error: "Format de téléphone invalide" });
   }
 
   User.findOne({ mail }).then(existingUser => {
-    if (existingUser) {
-      return res.json({ result: false, error: "User already exists" });
-    }
+      if (existingUser) {
+          return res.json({ result: false, error: "Utilisateur déjà existant" });
+      }
 
-    const hash = bcrypt.hashSync(password, 10);
+      const hash = bcrypt.hashSync(password, 10);
 
-    const newUser = new User({
-      token: uid2(32),
-      lastname,
-      firstname,
-      mail,
-      password: hash,
-    });
+      const newUser = new User({
+          token: uid2(32),
+          lastname: capitalize(lastname),
+          firstname: capitalize(firstname),
+          gender,
+          adresse: adresse.trim(),
+          phoneNumber: phoneNumber.trim(),
+          mail: mail.trim(),
+          password: hash,
+          registrationQuestionnaire,
+      });
 
-    newUser.save().then(() => {
-      res.json({ result: true, token: newUser.token });
-    }).catch(err => {
-      console.error(err);
-      res.json({ result: false, error: "Internal server error" });
-    });
-  }).catch(err => {
-    console.error(err);
-    res.json({ result: false, error: "Internal server error" });
-  });
+      newUser.save()
+          .then(() => res.json({ result: true, token: newUser.token }))
+          .catch(() => res.json({ result: false, error: "Erreur interne lors de l'enregistrement" }));
+  }).catch(() => res.json({ result: false, error: "Erreur interne" }));
 });
+
+function capitalize(str) {
+  return str.trim().charAt(0).toUpperCase() + str.trim().slice(1).toLowerCase();
+}
+
+
+// Route POST - Connexion (Signin)
 
 router.post('/signin', (req, res) => {
   const { mail, password } = req.body;
@@ -60,7 +71,8 @@ router.post('/signin', (req, res) => {
     return res.json({ result: false, error: "Missing fields" });
   }
 
-  User.findOne({ mail }).then(user => {
+  User.findOne({ mail })
+  .then(user => {
     if (!user) {
       return res.json({ result: false, error: "User not found" });
     }
@@ -70,10 +82,8 @@ router.post('/signin', (req, res) => {
     }
 
     res.json({ result: true, token: user.token });
-  }).catch(err => {
-    console.error(err);
-    res.json({ error: "Internal serveur error" });
-  });
+  })
+  .catch(err => res.json({ result: false, error: "Internal server error" }));
 });
 
 // Connection Google
