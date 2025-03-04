@@ -1,15 +1,20 @@
 const mongoose = require("mongoose");
 
-const userSchema = mongoose.Schema({
+const annonceSchema = mongoose.Schema({
     publicationDate: {
         type: Date,
         default: Date.now
       },
     pictures: [String],
+    many: Boolean,
     age: String,
     sort: String,
     gender: String,
     description: String,
+    author: {
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: "users"      
+      },
 });
 
 const Annonce = mongoose.model("annonces", annonceSchema);
