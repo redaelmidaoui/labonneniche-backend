@@ -61,7 +61,6 @@ function capitalize(str) {
   return str.trim().charAt(0).toUpperCase() + str.trim().slice(1).toLowerCase();
 }
 
-
 // Route POST - Connexion (Signin)
 
 router.post('/signin', (req, res) => {
@@ -86,7 +85,10 @@ router.post('/signin', (req, res) => {
   .catch(err => res.json({ result: false, error: "Internal server error" }));
 });
 
-// Connection Google
+// CONNECTION AVEC AUTHENTIFICATION GOOGLE
+
+// On commence par récupérer le fameux "credential" évoqué dans le front,
+// c'est ce qui permet d'authentifier l'utilisateur via Google
 
 router.post('/google-login', (req, res) => {
   const { credential } = req.body;
@@ -94,6 +96,10 @@ router.post('/google-login', (req, res) => {
   if (!credential) {
     return res.json({ result: false, error: "Missing credential" });
   }
+  
+// Un appel est ensuite lancé à l'adresse de Google afin que le token 
+// de l'utilisateur qui tente de se connecter soit authentifié, s'il l'est, 
+// Google renverra les informations client nécessaire à notre application
 
   const googleVerifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`;
 
@@ -103,6 +109,10 @@ router.post('/google-login', (req, res) => {
     if (!googleData.email) {
       return res.json({ result: false, error: "Invalid Google credential" });
     }
+
+    // On vérifie que le client est déjà enregistré dans notre base de données, 
+    // si c'est le cas, nous lui renvoyons son token déjà créé, si ça n'est pas 
+    // le cas, nous lui créons un token propre
 
     User.findOne({ mail: googleData.email })
       .then(user => {
@@ -137,7 +147,11 @@ router.post('/google-login', (req, res) => {
 });
 
 
-// Connection Facebook
+// CONNECTION AVEC AUTHENTIFICATION VIA FACEBOOK
+
+// Facebook n'utilise pas de "credential" pour l'authentification mais un "accessToken"
+// Ce token envoie un appel vers l'API Graph de Facebook qui nous permettra de récupérer 
+// les informations de l'utilisateur si son mail est validé par Facebook
 
 router.post('/facebook-login', (req, res) => {
   const { accessToken } = req.body;
@@ -154,6 +168,9 @@ router.post('/facebook-login', (req, res) => {
     if (!facebookData.email) {
       return res.json({ result: false, error: "Invalid Facebook accessToken" });
     }
+
+  // Comme dans le cas de l'authentification avec Google, on vérifie si l'utilisateur est déjà dazns notre base de données ou non,
+  // Si ce n'est pas le cas, nous lui créons un token, sinon nous utilisons celui qui lui est déjà attitré
 
     User.findOne({ mail: facebookData.email })
     .then(user => {
