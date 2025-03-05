@@ -72,6 +72,49 @@ router.get('/getMessaging/:id_user', (req, res) => {
     });
 });
 
-module.post()
+// /PUT /addMessage/:id_messaging - ajouter un message
+router.put('/addMessage/:id_messaging', async (req, res) => {
+    const { id_editor, content } = req.body;
+    const { id_messaging } = req.params;
+
+    // Vérifier si les champs ne sont pas manquants ou vides
+    if (!id_editor || !content) {
+        return res.json({ result: false, error: "Missing or empty fields" });
+    }
+
+    // Vérifier si l'id_messaging est fourni
+    if (!id_messaging) {
+        return res.json({ result: false, error: "Messaging ID is required" });
+    }
+
+    try {
+        // Récupérer l'objet Messaging avec l'id_messaging
+        const messaging = await Messaging.findOne({ _id: id_messaging });
+
+        // Vérifier si l'objet messaging a été trouvé
+        if (!messaging) {
+            return res.json({ result: false, error: "Messaging not found" });
+        }
+
+        // Créer le nouveau message
+        const newMessage = {
+            id_editor,
+            date_of_dispatch: Date.now(),
+            content,
+        };
+
+        // Ajouter le nouveau message à la liste des messages existants
+        messaging.messages.push(newMessage);
+
+        // Sauvegarder les modifications
+        await messaging.save();
+
+        return res.json({ result: true, message: "Message added successfully" });
+    } catch (err) {
+        // Gérer les erreurs
+        console.error(err);
+        return res.json({ result: false, error: "Error saving message" });
+    }
+});
 
 module.exports = router;
