@@ -1,7 +1,11 @@
+<<<<<<< HEAD
 require("dotenv").config();
 
 require("./models/connection");
 
+=======
+require('dotenv').config();
+>>>>>>> mathilde
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
