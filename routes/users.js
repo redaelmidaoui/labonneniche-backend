@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 const uid2 = require('uid2');
 const User = require('../models/users');
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const emailRegex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 const phoneRegex = /^((\+33|0)[67])(\d{8})$/;
 
 // Route GET pour récupérer tous les utilisateurs de la base de donnée
