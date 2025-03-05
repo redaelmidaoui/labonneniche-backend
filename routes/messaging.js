@@ -8,26 +8,48 @@ router.post('/', (req, res) => {
 
     const { id_user1, id_user2 } = req.body;
 
-    //Vérifier si les champs ne sont pas manquantes ou vides
+    // Vérifier si les champs ne sont pas manquants ou vides
     if (!id_user1 || !id_user2) {
         return res.json({ result: false, error: "Missing or empty fields" });
-    };
+    }
 
     // Vérifier si les deux utilisateurs existent dans la base de données
     User.findOne({ _id: id_user1 })
         .then(user1 => {
             if (!user1) {
-                return res.json({ result: false, error: "User 1 not found" });
+                // S'assurer que la réponse est envoyée une seule fois
+                if (!res.headersSent) {
+                    return res.json({ result: false, error: "User 1 not found" });
+                }
             }
 
             return User.findOne({ _id: id_user2 });
         })
         .then(user2 => {
             if (!user2) {
-                return res.json({ result: false, error: "User 2 not found" });
+                // S'assurer que la réponse est envoyée une seule fois
+                if (!res.headersSent) {
+                    return res.json({ result: false, error: "User 2 not found" });
+                }
             }
 
-            // Si les deux utilisateurs existent, créer la nouvelle messagerie
+            // Vérifier si une messagerie existe déjà entre les deux utilisateurs
+            return Messaging.findOne({
+                $or: [
+                    { id_user1: id_user1, id_user2: id_user2 },
+                    { id_user1: id_user2, id_user2: id_user1 }
+                ]
+            });
+        })
+        .then(existingMessaging => {
+            if (existingMessaging) {
+                // Si une messagerie existe déjà, ne pas en créer une nouvelle
+                if (!res.headersSent) {
+                    return res.json({ result: false, error: "Messaging already exists between these users" });
+                }
+            }
+
+            // Si aucune messagerie n'existe, créer la nouvelle messagerie
             const newMessaging = new Messaging({
                 id_user1: id_user1,
                 id_user2: id_user2,
@@ -37,10 +59,15 @@ router.post('/', (req, res) => {
             return newMessaging.save();
         })
         .then((data) => {
-            res.json({ result: true, newMessaging: data });
+            if (!res.headersSent) {
+                res.json({ result: true, newMessaging: data });
+            }
         })
         .catch(err => {
-            res.json({ result: false, error: err.message });
+            // S'assurer que la réponse est envoyée une seule fois
+            if (!res.headersSent) {
+                res.json({ result: false, error: err.message });
+            }
         });
 });
 
