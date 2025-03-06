@@ -1,6 +1,6 @@
 var express = require('express');
 var router = express.Router();
-const Annonce = require('../models/annonces');
+const Ad = require('../models/ads');
 const User = require('../models/users');
 
 
@@ -15,23 +15,25 @@ router.post('/', function(req, res) {
         
         const userId = user._id;
   
-        const newAnnonce = new Annonce({
+        const newAd = new Ad({
           publicationDate: new Date(),
-          pictures: [],
-          many: req.body.many,
+          pictures: req.body.pictures,
+          number: req.body.number,
           age: req.body.age,
           sort: req.body.sort,
           gender: req.body.gender,
           description: req.body.description,
+          city: req.body.city,
+          postalCode: req.body.postalCode,
           author: userId
         });
   
         // Sauvegarde de l'annonce
-        return newAnnonce.save();
+        return newAd.save();
       })
       .then(data => {
         // Une fois l'annonce sauvegardée, on récupère les informations de l'auteur
-        return Annonce.findById(data._id).populate('author');
+        return Ad.findById(data._id).populate('author');
       })
       .then(data => {
         // Réponse à l'utilisateur
@@ -45,9 +47,9 @@ router.post('/', function(req, res) {
   });
 
 router.get('/', function(req, res) {
-  Annonce.find().populate('author')
-  .then((annonces) => {
-    res.json(annonces);
+  Ad.find().populate('author')
+  .then((ads) => {
+    res.json(ads);
   });
 });
 
