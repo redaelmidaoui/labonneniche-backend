@@ -15,6 +15,23 @@ router.get('/', (req, res) => {
       .catch(() => res.json({ result: false, error: "Failed to fetch users" }));
 });
 
+// Route GET BY ID pour récupérer un seul utilisateur depuis la base de donnée en le ciblant avec son ID
+
+router.get('/:token', (req, res) => {
+  const userToken = req.params.token;
+
+  User.findOne({ token: userToken })
+  .then(user => {
+    if (!user) {
+      return res.json({ result: false, error: "Utilisateur non trouvé" });
+    }
+    res.json({ result: true, user });
+  })
+  .catch(() => {
+    res.json({ result: false, error: "Erreur lors de la récupération de l'utilisateur" });
+  });
+});
+
 // Route SignUp - Inscription Nouveaux utilisateurs
 
 router.post('/signup', (req, res) => {
@@ -80,72 +97,53 @@ router.post('/signin', (req, res) => {
       return res.json({ result: false, error: "Invalid password" });
     }
 
-    res.json({ result: true, token: user.token });
+    res.json({ result: true, token: user.token, userId: user._id });
   })
   .catch(err => res.json({ result: false, error: "Internal server error" }));
 });
 
 // CONNECTION AVEC AUTHENTIFICATION GOOGLE
 
-// On commence par récupérer le fameux "credential" évoqué dans le front,
-// c'est ce qui permet d'authentifier l'utilisateur via Google
-
 router.post('/google-login', (req, res) => {
   const { credential } = req.body;
 
   if (!credential) {
-    return res.json({ result: false, error: "Missing credential" });
+      return res.json({ result: false, error: "Missing credential" });
   }
-  
-// Un appel est ensuite lancé à l'adresse de Google afin que le token 
-// de l'utilisateur qui tente de se connecter soit authentifié, s'il l'est, 
-// Google renverra les informations client nécessaire à notre application
 
   const googleVerifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`;
 
   fetch(googleVerifyUrl)
-  .then(response => response.json())
-  .then(googleData => {
-    if (!googleData.email) {
-      return res.json({ result: false, error: "Invalid Google credential" });
-    }
+      .then(response => response.json())
+      .then(googleData => {
+          if (googleData.aud !== process.env.GOOGLE_CLIENT_ID) {
+              return res.json({ result: false, error: "Invalid audience" });
+          }
 
-    // On vérifie que le client est déjà enregistré dans notre base de données, 
-    // si c'est le cas, nous lui renvoyons son token déjà créé, si ça n'est pas 
-    // le cas, nous lui créons un token propre
+          if (googleData.email_verified !== "true") {
+              return res.json({ result: false, error: "Email non vérifié" });
+          }
 
-    User.findOne({ mail: googleData.email })
-      .then(user => {
-        if (user) {
-          res.json({ result: true, token: user.token, firstname: user.firstname });
-        } else {
-          const newUser = new User({
-            token: uid2(32),
-            lastname: googleData.family_name || '',
-            firstname: googleData.given_name || '',
-            mail: googleData.email,
-            password: 'google-oauth',
-          });
+          User.findOne({ mail: googleData.email }).then(user => {
+              if (user) {
+                  res.json({ result: true, token: user.token, firstname: user.firstname });
+              } else {
+                  const newUser = new User({
+                      token: uid2(32),
+                      lastname: googleData.family_name || '',
+                      firstname: googleData.given_name || '',
+                      mail: googleData.email,
+                      password: 'google-oauth',
+                  });
 
-          newUser.save()
-          .then(() => {
-            res.json({ result: true, token: newUser.token, firstname: newUser.firstname });
-          })
-          .catch(err => {
-            res.json({ result: false, error: "Database save error" });
-          });
-        }
+                  newUser.save()
+                      .then(() => res.json({ result: true, token: newUser.token, firstname: newUser.firstname }))
+                      .catch(() => res.json({ result: false, error: "Erreur création user" }));
+              }
+          }).catch(() => res.json({ result: false, error: "Erreur recherche user" }));
       })
-      .catch(err => {
-        res.json({ result: false, error: "Database find error" });
-      });
-  })
-  .catch(err => {
-    res.json({ result: false, error: "Google verification fetch error" });
-  });
-
+      .catch(() => res.json({ result: false, error: "Erreur vérification Google" }));
 });
-
 
 // CONNECTION AVEC AUTHENTIFICATION VIA FACEBOOK
 
