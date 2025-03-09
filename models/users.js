@@ -11,7 +11,7 @@ const userSchema = mongoose.Schema({
     phoneNumber: { type: String, default: '' },
     profilePhoto: { type: String, default: '' },
     registrationQuestionnaire: { type: Object, default: {} },
-    favoriteA: { type: [String], default: [] }
+    favoriteAds: { type: [String], default: [] }
 });
 
 const User = mongoose.model('users', userSchema);

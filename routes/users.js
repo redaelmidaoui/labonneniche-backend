@@ -3,6 +3,7 @@ var router = express.Router();
 const bcrypt = require('bcrypt');
 const uid2 = require('uid2');
 const User = require('../models/users');
+const Ad = require("../models/ads");
 
 const emailRegex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 const phoneRegex = /^((\+33|0)[67])(\d{8})$/;
@@ -31,6 +32,52 @@ router.get('/:token', (req, res) => {
     res.json({ result: false, error: "Erreur lors de la récupération de l'utilisateur" });
   });
 });
+
+
+// Route PUT pour mettre à jour les annonces favorites
+router.put('/addFavorites', async (req, res) => {
+  try {
+    const { token, favorites } = req.body; // Récupère le token et les favoris
+
+    // Trouve l'utilisateur en fonction du token
+    const user = await User.findOne({ token });
+
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur non trouvé" });
+    }
+
+    // Met à jour ses favoris
+    user.favoriteAds = favorites;
+    await user.save();
+
+    // Renvoie l'utilisateur mis à jour
+    res.json({ result: true, user });
+  } catch (error) {
+    
+    res.status(500).json({ error: "Erreur serveur", details: error.message });
+  }
+});
+
+// Route GET pour récupérer les annonces favorites d'un utilisateur
+router.get('/:token/favorites', async (req, res) => {
+  const { token } = req.params;
+
+  try {
+    const user = await User.findOne({ token });
+
+    if (!user) {
+      return res.status(404).json({ result: false, error: "Utilisateur non trouvé" });
+    }
+
+    // Récupérer les annonces favorites en fonction des IDs stockés
+    const favoriteAds = await Ad.find({ _id: { $in: user.favoriteAds } });
+
+    res.json({ result: true, favoriteAds });
+  } catch (error) {
+    res.status(500).json({ result: false, error: "Erreur serveur", details: error.message });
+  }
+});
+
 
 // Route SignUp - Inscription Nouveaux utilisateurs
 
