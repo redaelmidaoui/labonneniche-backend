@@ -3,6 +3,7 @@ var router = express.Router();
 const bcrypt = require('bcrypt');
 const uid2 = require('uid2');
 const User = require('../models/users');
+const { upload, cloudinary } = require('../cloudinaryConfig');
 
 const emailRegex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 const phoneRegex = /^((\+33|0)[67])(\d{8})$/;
@@ -102,103 +103,159 @@ router.post('/signin', (req, res) => {
   .catch(err => res.json({ result: false, error: "Internal server error" }));
 });
 
-// CONNECTION AVEC AUTHENTIFICATION GOOGLE
+// Route pour uploader la photo de profil du user dans son compte
 
-router.post('/google-login', (req, res) => {
-  const { credential } = req.body;
+router.post('/upload-profile-photo', upload.single('profilePhoto'), async (req, res) => {
+  const { token } = req.body;
 
-  if (!credential) {
-      return res.json({ result: false, error: "Missing credential" });
+  console.log("Image reçue :", res.file);
+  console.log("Token reçu :", token);
+
+  if (!req.file) {
+    return res.json({ result: false, error: 'Aucune image envoyée' });
   }
 
-  const googleVerifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`;
-
-  fetch(googleVerifyUrl)
-      .then(response => response.json())
-      .then(googleData => {
-          if (googleData.aud !== process.env.GOOGLE_CLIENT_ID) {
-              return res.json({ result: false, error: "Invalid audience" });
-          }
-
-          if (googleData.email_verified !== "true") {
-              return res.json({ result: false, error: "Email non vérifié" });
-          }
-
-          User.findOne({ mail: googleData.email }).then(user => {
-              if (user) {
-                  res.json({ result: true, token: user.token, firstname: user.firstname });
-              } else {
-                  const newUser = new User({
-                      token: uid2(32),
-                      lastname: googleData.family_name || '',
-                      firstname: googleData.given_name || '',
-                      mail: googleData.email,
-                      password: 'google-oauth',
-                  });
-
-                  newUser.save()
-                      .then(() => res.json({ result: true, token: newUser.token, firstname: newUser.firstname }))
-                      .catch(() => res.json({ result: false, error: "Erreur création user" }));
-              }
-          }).catch(() => res.json({ result: false, error: "Erreur recherche user" }));
-      })
-      .catch(() => res.json({ result: false, error: "Erreur vérification Google" }));
-});
-
-// CONNECTION AVEC AUTHENTIFICATION VIA FACEBOOK
-
-// Facebook n'utilise pas de "credential" pour l'authentification mais un "accessToken"
-// Ce token envoie un appel vers l'API Graph de Facebook qui nous permettra de récupérer 
-// les informations de l'utilisateur si son mail est validé par Facebook
-
-router.post('/facebook-login', (req, res) => {
-  const { accessToken } = req.body;
-
-  if (!accessToken) {
-    return res.json({ result: false, error: "Missing accessToken" });
-  }
-
-  const facebookVerifyUrl = `https://graph.facebook.com/me?fields=id,first_name,last_name,email&access_token=${accessToken}`;
-
-  fetch(facebookVerifyUrl)
-  .then(response => response.json())
-  .then(facebookData => {
-    if (!facebookData.email) {
-      return res.json({ result: false, error: "Invalid Facebook accessToken" });
+  try {
+    const user = await User.findOne({ token });
+    if (!user) {
+      return res.json({ result: false, error: 'Utilisateur introuvable' })
     }
 
-  // Comme dans le cas de l'authentification avec Google, on vérifie si l'utilisateur est déjà dazns notre base de données ou non,
-  // Si ce n'est pas le cas, nous lui créons un token, sinon nous utilisons celui qui lui est déjà attitré
+    console.log("Utilisateur trouvé :", user.firstname);
 
-    User.findOne({ mail: facebookData.email })
-    .then(user => {
-      if (user) {
-        res.json({ result: true, token: user.token, firstname: user.firstname });
-      } else {
-        const newUser = new User({
-          token: uid2(32),
-          lastname: facebookData.last_name || '',
-          firstname: facebookData.first_name || '',
-          mail: facebookData.email,
-          password: 'facebook-oauth',
-        });
+    // Mise à jour de l'image car l'utilisateur 
+    // a la possibilité de la remplacer depuis son compte
+    
+    user.profilePhoto = req.file.path;
+    await user.save();
 
-        newUser.save()
-        .then(() => {
-          res.json({ result: true, token: newUser.token, firstname: newUser.firstname });
-        })
-        .catch(err => {
-          res.json({ result: false, error: "Database save error" });
-        });
+    console.log("Photo mise à jour :", user.profilePhoto);
+
+    res.json({ result: true, profilePhoto: user.profilePhoto });
+  } catch (error) {
+    console.log("Erreur du serveur :", error);
+    res.json({ result: false, error: 'Erreur du serveur' });
+  }
+});
+
+// Route servant à la suppression de la photo de profil 
+// (idem, l'utilisateur a la possibilité de la remplacer 
+// depuis son compte)
+
+router.post('/delete-profile-photo', async (req, res) => {
+  const { token } = req.body;
+
+  try {
+    const user = await User.findOne({ token });
+    if(!user) {
+      return res.json({ result: false, error: 'Utilisateur introuvable' });
+    }
+
+    if (user.profilePhoto) {
+      const publicId = user.profilePhoto.split('/').pop().split('.')[0]; // Extraction du publicId du user à l'origine de la suppression
+      await cloudinary.uploader.destroy(`profile_photos/${publicId}`);
+      user.profilePhoto = '';
+      await user.save();
+    }
+
+    res.json({ result: true });
+  } catch (error) {
+    res.json({ result: false, error: 'Erreur du serveur' });
+  }
+});
+
+// Route pour updater le profil utilisateur depuis la page "Mon compte"
+
+router.post('/update-profile', async (req, res) => {
+  const { token, firstname, lastname, gender, adresse, phoneNumber, mail } = req.body;
+
+  try {
+    const user = await User.findOne({ token });
+    if (!user) {
+      return res.json({ result: false, error: 'Utilisateur introuvable' });
+    }
+
+    // Donne à l'utilisateur l'accès à ses informations afin qu'il puisse les modifier
+    user.firstname = firstname;
+    user.lastname = lastname;
+    user.gender = gender;
+    user.adresse = adresse;
+    user.phoneNumber = phoneNumber;
+    user.mail = mail;
+
+    await user.save();
+
+    res.json({ result: true, user });
+  } catch (error) {
+    console.error("Erreur du serveur :", error);
+    res.json({ result: false, error: 'Erreur lors de la mise à jour du profil' });
+  }
+});
+
+// Récupère les données du calendrier d'un utilisateur donné (dates d'indisponibilités et dates de rendez-vous)
+router.get('/calendar/:token', async (req, res) => {
+  try {
+    const user = await User.findOne({ token: req.params.token });
+    if (!user) {
+      return res.json({ result: false, error: "Utilisateur introuvable" });
+    }
+
+    res.json({ result: true, unavailable: user.unavailable || [], appointments: user.appointments || [] });
+  } catch (error) {
+    res.json({ result: false, error: "Erreur lors du chargeme,t des données du calendrier" });
+  }
+});
+
+// Met à jour les données du calendrier
+router.post('/update-calendar', async (req, res) => {
+  const { token, unavailable, appointments } = req.body;
+
+  try {
+    const user = await User.findOne({ token });
+    if(!user) {
+      return res.json({ result: false, error: "Utilisateur introuvable" });
+    }
+
+    user.unavailable = unavailable;
+    user.appointments= appointments;
+    await user.save();
+
+    res.json({ result: true });
+  } catch (error) {
+    res.json({ result: false, error: "Erreur lors de la mise à jour du calendrier" });
+  }
+});
+
+
+// CONNECTION AVEC AUTHENTIFICATION GOOGLE
+
+router.post('/google-login', async (req, res) => {
+  const { email, name } = req.body;
+
+  if (!email || !name) {
+      return res.json({ result: false, error: "Informations Google manquantes" });
+  }
+
+  try {
+      let user = await User.findOne({ mail: email });
+
+      if (!user) {
+          user = new User({
+              token: uid2(32),
+              firstname: name.split(' ')[0],
+              lastname: name.split(' ')[1] || '',
+              mail: email,
+              password: 'google-oauth' // On met un mot de passe bidon car Google gère l'auth
+          });
+
+          await user.save();
       }
-    })
-    .catch(err => {
-      res.json({ result: false, error: "Database find error" });
-    });
-  })
-  .catch(err => {
-    res.json({ result: false, error: "Facebook verification fetch error" });
-  });
+
+      res.json({ result: true, token: user.token, user });
+  } catch (error) {
+      console.error("Erreur serveur lors de la connexion Google :", error);
+      res.json({ result: false, error: "Erreur serveur" });
+  }
 });
 
 module.exports = router;
