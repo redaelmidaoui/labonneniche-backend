@@ -48,7 +48,7 @@ router.put('/addFavorites', async (req, res) => {
     }
 
     // Met à jour ses favoris
-    user.favoriteAds = favorites;
+    user.favoriteA = favorites;
     await user.save();
 
     // Renvoie l'utilisateur mis à jour
@@ -71,9 +71,9 @@ router.get('/:token/favorites', async (req, res) => {
     }
 
     // Récupérer les annonces favorites en fonction des IDs stockés
-    const favoriteAds = await Ad.find({ _id: { $in: user.favoriteAds } });
+    const favoriteA = await Ad.find({ _id: { $in: user.favoriteA } });
 
-    res.json({ result: true, favoriteAds });
+    res.json({ result: true, favoriteA });
   } catch (error) {
     res.status(500).json({ result: false, error: "Erreur serveur", details: error.message });
   }
