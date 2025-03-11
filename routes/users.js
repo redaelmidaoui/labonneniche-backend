@@ -16,7 +16,7 @@ router.get('/', (req, res) => {
       .catch(() => res.json({ result: false, error: "Failed to fetch users" }));
 });
 
-// Route GET BY ID pour récupérer un seul utilisateur depuis la base de donnée en le ciblant avec son ID
+// Route GET avec le token pour récupérer un seul utilisateur depuis la base de donnée en le ciblant avec son token
 
 router.get('/:token', (req, res) => {
   const userToken = req.params.token;
@@ -37,7 +37,7 @@ router.get('/:token', (req, res) => {
 
 router.post('/signup', (req, res) => {
   const { firstname, lastname, gender, adresse, phoneNumber, mail, password, registrationQuestionnaire } = req.body;
-
+  console.log(req.body);
   if (!firstname || !lastname || !gender || !adresse || !phoneNumber || !mail || !password) {
       return res.json({ result: false, error: "Tous les champs sont requis" });
   }
@@ -70,9 +70,21 @@ router.post('/signup', (req, res) => {
       });
 
       newUser.save()
-          .then(() => res.json({ result: true, token: newUser.token }))
-          .catch(() => res.json({ result: false, error: "Erreur interne lors de l'enregistrement" }));
-  }).catch(() => res.json({ result: false, error: "Erreur interne" }));
+          .then((newDoc) => res.json({ result: true, newDoc : { token: newDoc.token, 
+                                                                userId: newDoc._id, 
+                                                                userLastname: newDoc.lastname, 
+                                                                userFirstname: newDoc.firstname, 
+                                                                userMail: newDoc.mail, 
+                                                                userPhoneNumber: newDoc.phoneNumber, 
+                                                                userAdresse: newDoc.adresse, 
+                                                                userGender: newDoc.gender, 
+                                                                userRegistrationQuestionnaire: newDoc.registrationQuestionnaire, 
+                                                                userUnavailable: newDoc.unavailable,
+                                                                appointments: newDoc.appointments 
+                                                              } }))
+
+          .catch((error) => res.json({ result: false, error }));
+  }).catch((error) => res.json({ result: false, error }));
 });
 
 function capitalize(str) {
@@ -98,7 +110,7 @@ router.post('/signin', (req, res) => {
       return res.json({ result: false, error: "Invalid password" });
     }
 
-    res.json({ result: true, token: user.token, userId: user._id });
+    res.json({ result: true, newDoc: user });
   })
   .catch(err => res.json({ result: false, error: "Internal server error" }));
 });
