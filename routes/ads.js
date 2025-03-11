@@ -6,6 +6,9 @@ const User = require('../models/users');
 
 
 router.post('/', function(req, res) {
+  console.log(req.body);
+  const {author} = req.body;
+  console.log(author);
     // Vérifier si l'utilisateur existe dans la base de données
     User.findOne({ token: req.body.token })
       .then(user => {
@@ -37,14 +40,17 @@ router.post('/', function(req, res) {
       })
       .then(data => {
         // Réponse à l'utilisateur
-        res.json({ data });
+        return res.json({ data });
       })
       .catch(err => {
         // Gestion des erreurs
-        console.error(err); // pour le debug
-        res.status(500).json({ message: 'Erreur serveur', error: err });
+        console.error(err);
+        if (!res.headersSent){
+          res.status(500).json({ message: 'Erreur serveur', error: err });
+        }
       });
-  });
+  }); 
+  
 
 router.get('/', function(req, res) {
   Ad.find().populate('author')
