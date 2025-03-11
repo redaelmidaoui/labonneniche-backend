@@ -305,4 +305,9 @@ router.post('/google-login', async (req, res) => {
   }
 });
 
+router.get('/getUser/:user_id', (req, res) => {
+  User.findOne({_id: req.params.user_id})
+  .then(data => res.json({result: true, data}));
+})
+
 module.exports = router;

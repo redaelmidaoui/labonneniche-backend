@@ -36,8 +36,8 @@ router.post('/', (req, res) => {
             // Vérifier si une messagerie existe déjà entre les deux utilisateurs
             return Messaging.findOne({
                 $or: [
-                    { id_user1: id_user1, id_user2: id_user2 },
-                    { id_user1: id_user2, id_user2: id_user1 }
+                    { user1: id_user1, user2: id_user2 },
+                    { user1: id_user2, user2: id_user1 }
                 ]
             });
         })
@@ -51,8 +51,8 @@ router.post('/', (req, res) => {
 
             // Si aucune messagerie n'existe, créer la nouvelle messagerie
             const newMessaging = new Messaging({
-                id_user1: id_user1,
-                id_user2: id_user2,
+                user1: id_user1,
+                user2: id_user2,
                 messages: [],
             });
 
@@ -83,10 +83,14 @@ router.get('/getMessaging/:id_user', (req, res) => {
     // Trouver toutes les messageries où l'utilisateur est soit id_user1 soit id_user2
     Messaging.find({
         $or: [
-            { id_user1: id_user },
-            { id_user2: id_user }
+            { user1: id_user },
+            { user2: id_user }
         ]
     })
+    .populate([
+        {path: 'user1', select: ['_id', 'firstname', 'mail', 'profilePhoto']},
+        {path: 'user2', select: ['_id', 'firstname', 'mail', 'profilePhoto']}
+    ])
     .then(messageries => {
         if (messageries.length === 0) {
             return res.json({ result: false, message: "No messageries found for this user" });
