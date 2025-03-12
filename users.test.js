@@ -19,6 +19,12 @@ const testUser = {
     registrationQuestionnaire: { haveAGarden: 'no' }
 };
 
+afterAll(async () => {
+    await User.deleteOne({ mail: testUser.mail })
+    await mongoose.connection.close();
+})
+
+
 // Test de la route 'signup' => Cette dernière doit retourner 
 // un succès si le user est valide (qu'il était donc déjà 
 // enregistré en base de données)
