@@ -12,9 +12,8 @@ describe("Tests des routes d'annonces", () => {
 
     beforeAll(async () => {
 
-        // Nettoyage de la base
-        await User.deleteMany({});
-        await Ad.deleteMany({});
+ 
+       
 
         // Création d'un utilisateur de test
         const user = new User({
@@ -42,10 +41,7 @@ describe("Tests des routes d'annonces", () => {
             await mongoose.connection.close();
         }
     });
-    // Nettoyage de la base de données avant chaque test
-    beforeEach(async () => {
-        await Ad.deleteMany({});
-    });
+    
 
     // Test de la création d'une annonce
     test("POST /ads -> doit créer une annonce et la retourner avec l'auteur", async () => {
@@ -86,7 +82,7 @@ describe("Tests des routes d'annonces", () => {
             publicationDate: new Date(),
             pictures: ["image1.jpg"],
             number: 1,
-            age: 2,
+            age: "junior",
             sort: "chien",
             gender: "male",
             description: "Annonce test",
