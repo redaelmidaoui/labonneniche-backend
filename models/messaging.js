@@ -7,8 +7,8 @@ const messageSchema = mongoose.Schema({
 })
 
 const messagingSchema = mongoose.Schema({
-  id_user1: { type: mongoose.Schema.Types.ObjectId, ref: 'users'},
-  id_user2: { type: mongoose.Schema.Types.ObjectId, ref: 'users'},
+  user1: { type: mongoose.Schema.Types.ObjectId, ref: 'users'},
+  user2: { type: mongoose.Schema.Types.ObjectId, ref: 'users'},
   messages: [messageSchema],
 });
 

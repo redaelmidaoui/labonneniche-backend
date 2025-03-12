@@ -41,14 +41,25 @@ router.post("/", function (req, res) {
       console.error(err); // Debug
       res.status(500).json({ message: "Erreur serveur", error: err });
     });
-});
+});  
 
-router.get("/", function (req, res) {
-  Ad.find()
-    .populate("author")
-    .then((ads) => {
-      res.json(ads);
-    });
+router.get('/', function(req, res) {
+  const {type, age, gender} = req.query;
+
+  let filters = {};
+
+  if (type) filters.sort = type;
+  if (age) filters.age = age;
+  if (gender) filters.gender = gender;
+
+  Ad.find().populate('author')
+  .then((ads) => {
+    res.json(ads);
+  })
+  .catch((err) => {
+    console.error(err);
+    res.status(500).json({ message: 'Erreur serveur', error: err });
+  });
 });
 
 router.get("/:id", function (req, res) {
@@ -63,3 +74,6 @@ router.get("/:id", function (req, res) {
 });
 
 module.exports = router;
+
+
+

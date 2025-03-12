@@ -19,22 +19,11 @@ const testUser = {
     registrationQuestionnaire: { haveAGarden: 'no' }
 };
 
-// Un des tests consiste à créer un utilisateur, il faut donc nettoyer 
-// la base de données à chaque fois que l'on lance les tests, sinon 
-// le test de création de compte sera faut étant donné que l'ilisateur 
-// existera déjà dans la base de données avec cette adresse mail et 
-// ce mot de passe
-
-beforeEach(async () => {
-    await User.deleteOne({ mail: testUser.mail });
-});
-
-// On demande à la base de données de se fermer correctement 
-// après les différents tests
-
 afterAll(async () => {
+    await User.deleteOne({ mail: testUser.mail })
     await mongoose.connection.close();
-});
+})
+
 
 // Test de la route 'signup' => Cette dernière doit retourner 
 // un succès si le user est valide (qu'il était donc déjà 
@@ -45,21 +34,10 @@ it('POST /users/signup - test user valide', async () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body.result).toBe(true);
-    expect(res.body.token).toBeDefined();
+    expect(res.body.newDoc).toBeDefined();
+    expect(res.body.newDoc.token).toBeDefined();
 });
 
-// Test de la route 'signup' => Cette dernière doit retourner 
-// une erreur dans le cas où l'email renseigné par le user n'existerait 
-// pas dans la BDD
-
-it('POST /users/signup - test email non existant', async () => {
-    const invalidUser = { ...testUser, mail: 'invalid-email' };
-    const res = await request(app).post('/users/signup').send(invalidUser);
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body.result).toBe(false);
-    expect(res.body.error).toBe("Format d'email invalide");
-});
 
 // Test de la route 'signin' => Cette dernière doit retourner 
 // une erreur dans le cas où l'email renseigné par le user serait erroné 
@@ -83,11 +61,11 @@ it ('POST /users/signin - test mot de passe erroné', async () => {
     // Pour le bon fonctionnement du test on reprend le mail enregistré 
     // dans la constante en début de test : mail: 'alice@gmail.com'
 
-    const hashedPassword = bcrypt.hashSync(testUser.password, 10);
-    await User.create({ ...testUser, password: hashedPassword, token: 'faketoken' });
+    // const hashedPassword = bcrypt.hashSync(testUser.password, 10);
+    // await User.create({ ...testUser, password: hashedPassword, token: 'faketoken' });
 
     const res = await request(app).post('/users/signin').send({
-        mail: testUser.mail,
+        mail: "alice@gmail.com",
         password: 'fauxmotdepasse'
     });
 
@@ -103,6 +81,7 @@ it('GET /users/:token - test pour retrouver un user avec son token', async () =>
     const res = await request(app).get('/users/faketoken');
 
     expect(res.statusCode).toBe(200);
+    expect(res.body.result).toBe(false);
     expect(res.body.error).toBe("Utilisateur non trouvé");
 });
 

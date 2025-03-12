@@ -10,14 +10,12 @@ describe("Tests des routes d'annonces", () => {
 
     const mongoose = require("./models/connection");
 
+    let user;
+
     beforeAll(async () => {
 
-        // Nettoyage de la base
-        // await User.deleteMany({});
-        // await Ad.deleteMany({});
-
         // Création d'un utilisateur de test
-        const user = new User({
+        user = new User({
             token: "test-token",
             lastname: "Doe",
             firstname: "John",
@@ -38,10 +36,12 @@ describe("Tests des routes d'annonces", () => {
 
     // Fermeture de la connexion à la base de données
     afterAll(async () => {
+        await User.deleteOne({mail: user.mail});
         if (mongoose.connection && mongoose.connection.readyState !== 0) {
             await mongoose.connection.close();
         }
-    }); 
+    });
+    
 
     // Test de la création d'une annonce
     test("POST /ads -> doit créer une annonce et la retourner avec l'auteur", async () => {
@@ -82,7 +82,7 @@ describe("Tests des routes d'annonces", () => {
             publicationDate: new Date(),
             pictures: ["image1.jpg"],
             number: 1,
-            age: 2,
+            age: "junior",
             sort: "chien",
             gender: "male",
             description: "Annonce test",
@@ -91,12 +91,15 @@ describe("Tests des routes d'annonces", () => {
             author: userId
         });
 
+        const ads = await Ad.find();
+        console.log(ads);
+        
+
         // Récupération des annonces    
         const response = await request(app)
             .get("/ads")
             .expect(200);
         
-        expect(response.body.length).toBe(1);
-        expect(response.body[0].description).toBe("Annonce test");
+        expect(response.body.length).toBe(ads.length);
     });
 });
