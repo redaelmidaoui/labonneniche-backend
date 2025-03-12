@@ -51,4 +51,15 @@ router.get("/", function (req, res) {
     });
 });
 
+router.get("/:id", function (req, res) {
+  Ad.findById(req.params.id)
+    .populate("author")
+    .then((ad) => {
+      if (!ad) {
+        return res.status(404).json({ message: "Annonce non trouvée" });
+      }
+      res.json(ad);
+    });
+});
+
 module.exports = router;
