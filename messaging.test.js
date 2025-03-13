@@ -27,8 +27,8 @@ const addUsers = async () => {
 
 const addMessaging = async () => {
     messaging = new Messaging({
-        id_user1: user1._id,
-        id_user2: user2._id,
+        user1: user1._id,
+        user2: user2._id,
         messages: [],
     })
     await messaging.save();
@@ -41,8 +41,8 @@ beforeAll(async () => {
 afterAll(async () => {
     await Messaging.deleteMany({
         $or: [
-            { id_user1: user1._id },
-            { id_user2: user2._id }
+            { user1: user1._id },
+            { user2: user2._id }
         ]
     });
     await User.deleteMany({
@@ -58,8 +58,8 @@ it('/POST / - créer une messagerie', async () => {
     const res = await request(app)
         .post('/messaging/')
         .send({
-            id_user1: user1._id,
-            id_user2: user2._id,
+            user1: user1._id,
+            user2: user2._id,
         });
 
     expect(res.status).toBe(200);
@@ -72,8 +72,8 @@ it('/POST / - erreur messagerie déjà existante', async () => {
     const res = await request(app)
         .post('/messaging/')
         .send({
-            id_user1: user1._id,
-            id_user2: user2._id,
+            user1: user1._id,
+            user2: user2._id,
         });
 
     expect(res.status).toBe(200);
