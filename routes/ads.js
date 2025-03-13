@@ -43,6 +43,7 @@ router.post("/", function (req, res) {
     });
 });  
 
+// Route pour récupérer toutes les annonces
 router.get('/', function(req, res) {
   const {type, age, gender} = req.query;
 
@@ -62,6 +63,7 @@ router.get('/', function(req, res) {
   });
 });
 
+// Route pour récupérer une annonce par son ID
 router.get("/:id", function (req, res) {
   Ad.findById(req.params.id)
     .populate("author")
@@ -72,6 +74,26 @@ router.get("/:id", function (req, res) {
       res.json(ad);
     });
 });
+
+
+  router.get("/myAds/:author", async function (req, res) {
+    try {
+      const { author } = req.params;
+      const ads = await Ad.find({ author: author }); // Recherche des annonces par auteur
+
+      if (!ads.length) {
+        return res.status(404).json({ message: "Aucune annonce trouvée pour cet auteur" });
+      }
+
+      res.status(200).json(ads);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des annonces :", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+
+
 
 module.exports = router;
 

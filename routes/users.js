@@ -59,6 +59,22 @@ router.put('/addFavorites', async (req, res) => {
   }
 });
 
+router.get('/:token', async (req, res) => {
+  const { token } = req.params;
+
+  try {
+    const user = await User.findOne({ token });
+    if (!user) {
+      return res.status(404).json({ result: false, error: "Utilisateur non trouvé" });
+    }
+
+    res.json({ result: true, user });
+  } catch (error) {
+    res.status(500).json({ result: false, error: "Erreur serveur", details: error.message });
+  }
+
+});
+
 // Route GET pour récupérer les annonces favorites d'un utilisateur
 router.get('/:token/favorites', async (req, res) => {
   const { token } = req.params;
